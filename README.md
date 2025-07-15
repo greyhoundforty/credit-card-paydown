@@ -146,26 +146,6 @@ Capital One,0,2000.00,0,28th
 pip install click
 ```
 
-## Advanced Usage
-
-### Programmatic Usage
-```python
-from cc_paydown_planner import CreditCard, create_payment_schedule
-
-# Create credit cards
-cards = [
-    CreditCard("Card 1", 5000.00, 150.00, "15th", 18.0),
-    CreditCard("Card 2", 2500.00, 75.00, "28th", 15.0)
-]
-
-# Calculate payment schedule
-result = create_payment_schedule(cards, 500.00)
-
-if 'error' not in result:
-    print(f"Payoff time: {result['total_months']} months")
-    print(f"Total interest: ${result['total_interest_paid']:.2f}")
-```
-
 ### Error Handling
 
 The tool handles various error conditions gracefully:
