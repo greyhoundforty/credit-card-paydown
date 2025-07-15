@@ -63,6 +63,43 @@ pre-commit run --all-files
 **Secrets Detection:**
 The project uses `detect-secrets` to prevent committing sensitive information. A baseline file (`.secrets.baseline`) tracks known false positives.
 
+#### Testing
+
+The project uses pytest for testing:
+
+```bash
+# Install pytest (if not already installed)
+pip install pytest
+
+# Run all tests
+pytest
+
+# Run tests with verbose output
+pytest -v
+
+# Run specific test file
+pytest tests/test_credit_card.py
+
+# Run tests with coverage (if pytest-cov installed)
+pytest --cov=cc_paydown_planner
+
+# Run tests and stop on first failure
+pytest -x
+```
+
+**Test Structure:**
+- `tests/test_credit_card.py`: Tests for CreditCard class and calculate_interest function
+- `tests/test_payment_schedule.py`: Tests for payment schedule calculation and debt snowball logic
+- `tests/test_file_operations.py`: Tests for JSON/CSV file input/output operations
+
+**Test Coverage:**
+- CreditCard class initialization and methods
+- Interest calculation functions
+- Payment schedule generation (debt snowball method)
+- File format validation and error handling
+- Zero balance card handling
+- Edge cases and error conditions
+
 ## Code Architecture
 
 ### Core Components
