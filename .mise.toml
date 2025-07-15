@@ -21,6 +21,22 @@ description = "Install pip packages"
 alias = "uvi"
 run = "uv pip install"
 
+[tasks.install]
+description = "Install project dependencies"
+run = "pip install click pytest"
+
+[tasks.start]
+description = "Run the credit card paydown planner"
+run = "python cc_paydown_planner.py"
+
+[tasks.test]
+description = "Run the test suite"
+run = "pytest"
+
+[tasks.demo]
+description = "Run demo with example data"
+run = "python cc_paydown_planner.py --file demo-cards.json --budget 500"
+
 [tasks.info]
 description = "Print project information"
 run = '''

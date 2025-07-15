@@ -1,0 +1,37 @@
+[
+  {
+    "card_name": "Chase Freedom",
+    "current_balance": 2850.00,
+    "minimum_payment": 85.00,
+    "payment_due_date": "15th",
+    "apr": 19.99
+  },
+  {
+    "card_name": "Capital One Venture",
+    "current_balance": 1250.00,
+    "minimum_payment": 35.00,
+    "payment_due_date": "28th",
+    "apr": 17.24
+  },
+  {
+    "card_name": "Discover It",
+    "current_balance": 580.00,
+    "minimum_payment": 25.00,
+    "payment_due_date": "5th",
+    "apr": 15.99
+  },
+  {
+    "card_name": "Citi Double Cash",
+    "current_balance": 3420.00,
+    "minimum_payment": 105.00,
+    "payment_due_date": "22nd",
+    "apr": 21.99
+  },
+  {
+    "card_name": "Amazon Prime Card",
+    "current_balance": 0.00,
+    "minimum_payment": 0.00,
+    "payment_due_date": "10th",
+    "apr": 18.74
+  }
+]

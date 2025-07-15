@@ -1,0 +1,30 @@
+[
+  {
+    "card_name": "Store Card",
+    "current_balance": 485.00,
+    "minimum_payment": 25.00,
+    "payment_due_date": "12th",
+    "apr": 24.99
+  },
+  {
+    "card_name": "Cashback Card",
+    "current_balance": 1875.00,
+    "minimum_payment": 65.00,
+    "payment_due_date": "18th",
+    "apr": 18.74
+  },
+  {
+    "card_name": "Travel Rewards",
+    "current_balance": 3240.00,
+    "minimum_payment": 95.00,
+    "payment_due_date": "25th",
+    "apr": 20.49
+  },
+  {
+    "card_name": "Emergency Card",
+    "current_balance": 750.00,
+    "minimum_payment": 30.00,
+    "payment_due_date": "5th",
+    "apr": 22.99
+  }
+]
