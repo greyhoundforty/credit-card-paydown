@@ -92,6 +92,10 @@ Card Name,Current Balance,Credit Limit,Minimum Payment,Payment Due Date
 Chase Freedom,3500.00,5000.00,75.00,15th
 ```
 
+## Demo
+
+[![asciicast recording of utility](https://asciinema.org/a/727977.svg)](https://asciinema.org/a/727977)
+
 ## Dependencies
 
 - Python 3.7 or higher
