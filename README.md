@@ -94,7 +94,7 @@ Chase Freedom,3500.00,5000.00,75.00,15th
 
 ## Demo
 
-[![asciicast recording of utility](https://asciinema.org/a/727977.svg)](https://asciinema.org/a/727977)
+<a href="https://asciinema.org/a/727977" target="_blank"><img src="https://asciinema.org/a/727977.svg" /></a>
 
 ## Dependencies
 
