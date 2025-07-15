@@ -93,7 +93,9 @@ Chase Freedom,3500.00,5000.00,75.00,15th
 ```
 
 ## Demo
-[![asciicast](https://asciinema.org/a/727977.svg)](https://asciinema.org/a/727977)
+
+![asciinema demo recording](./demo.gif)
+
 
 ## Dependencies
 
