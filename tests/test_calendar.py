@@ -21,7 +21,10 @@ from cc_paydown_planner import (
     get_card_colors,
     assign_card_colors,
     show_rich_calendar_view,
-    RICH_AVAILABLE
+    get_matplotlib_color,
+    export_payment_schedule,
+    RICH_AVAILABLE,
+    MATPLOTLIB_AVAILABLE
 )
 
 
@@ -330,6 +333,83 @@ class TestRichCalendarFunctions(unittest.TestCase):
         card_colors = assign_card_colors(zero_balance_cards)
         self.assertEqual(len(card_colors), 0)
         self.assertEqual(card_colors, {})
+
+
+class TestExportFunctions(unittest.TestCase):
+    
+    def setUp(self):
+        """Set up test fixtures."""
+        self.test_cards = [
+            CreditCard("Chase Freedom", 2850.00, 85.00, "15th", 19.99),
+            CreditCard("Capital One Venture", 1250.00, 35.00, "28th", 17.24),
+            CreditCard("Discover It", 580.00, 25.00, "5th", 15.99),
+            CreditCard("Amazon Prime Card", 0.00, 0.00, "10th", 18.74),  # Zero balance
+        ]
+    
+    def test_get_matplotlib_color(self):
+        """Test matplotlib color conversion."""
+        test_cases = [
+            ('red', '#FF0000'),
+            ('green', '#00FF00'),
+            ('blue', '#0000FF'),
+            ('magenta', '#FF00FF'),
+            ('invalid_color', '#000000'),  # Default fallback
+        ]
+        
+        for rich_color, expected_hex in test_cases:
+            with self.subTest(rich_color=rich_color):
+                result = get_matplotlib_color(rich_color)
+                self.assertEqual(result, expected_hex)
+    
+    def test_export_payment_schedule_requirements(self):
+        """Test export functionality requirements."""
+        if not MATPLOTLIB_AVAILABLE:
+            # Test that function raises appropriate error when matplotlib unavailable
+            with self.assertRaises(ImportError):
+                export_payment_schedule(self.test_cards, 3, 'pdf')
+        else:
+            # Test that function works when matplotlib is available
+            try:
+                # This should work without error
+                cards_with_balance = [card for card in self.test_cards if card.balance > 0]
+                filename = export_payment_schedule(cards_with_balance, 3, 'pdf', 'test_export')
+                self.assertTrue(filename.endswith('.pdf'))
+                
+                # Clean up test file
+                import os
+                if os.path.exists(filename):
+                    os.remove(filename)
+                    
+            except Exception as e:
+                self.fail(f"Export function failed with matplotlib available: {e}")
+    
+    def test_export_filename_handling(self):
+        """Test export filename handling."""
+        # Test default filename generation
+        if MATPLOTLIB_AVAILABLE:
+            cards_with_balance = [card for card in self.test_cards if card.balance > 0]
+            
+            # Test default filename
+            filename = export_payment_schedule(cards_with_balance, 6, 'png', None)
+            self.assertTrue(filename.startswith('payment_schedule_6months'))
+            self.assertTrue(filename.endswith('.png'))
+            
+            # Clean up
+            import os
+            if os.path.exists(filename):
+                os.remove(filename)
+    
+    def test_export_with_zero_balance_cards(self):
+        """Test export with cards that have zero balance."""
+        if MATPLOTLIB_AVAILABLE:
+            # Should only process cards with balances > 0
+            filename = export_payment_schedule(self.test_cards, 3, 'pdf', 'test_zero_balance')
+            self.assertTrue(filename.endswith('.pdf'))
+            
+            # Clean up
+            import os
+            if os.path.exists(filename):
+                os.remove(filename)
 
 
 if __name__ == '__main__':

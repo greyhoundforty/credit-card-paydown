@@ -25,6 +25,16 @@ try:
 except ImportError:
     RICH_AVAILABLE = False
 
+# Try to import matplotlib for export functionality
+try:
+    import matplotlib.pyplot as plt
+    import matplotlib.patches as patches
+    from matplotlib.colors import to_hex
+    import matplotlib.dates as mdates
+    MATPLOTLIB_AVAILABLE = True
+except ImportError:
+    MATPLOTLIB_AVAILABLE = False
+
 
 class CreditCard:
     def __init__(
@@ -445,6 +455,190 @@ def show_rich_calendar_view(cards: List[CreditCard], month: int = None, year: in
         console.print()
 
 
+def get_matplotlib_color(rich_color: str) -> str:
+    """Convert rich color names to matplotlib-compatible colors."""
+    color_map = {
+        'red': '#FF0000',
+        'green': '#00FF00', 
+        'blue': '#0000FF',
+        'magenta': '#FF00FF',
+        'cyan': '#00FFFF',
+        'bright_red': '#FF4444',
+        'bright_green': '#44FF44',
+        'bright_blue': '#4444FF',
+        'bright_magenta': '#FF44FF',
+        'bright_cyan': '#44FFFF',
+        'purple': '#800080',
+        'orange': '#FFA500',
+        'grey': '#808080',
+        'bright_black': '#444444',
+        'dark_red': '#8B0000',
+        'dark_green': '#006400',
+        'dark_blue': '#000080',
+        'dark_magenta': '#8B008B',
+        'dark_cyan': '#008B8B'
+    }
+    return color_map.get(rich_color, '#000000')
+
+
+def export_payment_schedule(cards: List[CreditCard], months: int = 12, output_format: str = 'pdf', filename: str = None) -> str:
+    """Export payment schedule calendar to PDF or PNG format."""
+    if not MATPLOTLIB_AVAILABLE:
+        raise ImportError("matplotlib is required for export functionality. Install with: pip install matplotlib")
+    
+    if not filename:
+        filename = f"payment_schedule_{months}months"
+    
+    # Remove extension if provided, we'll add it based on format
+    if filename.endswith('.pdf') or filename.endswith('.png'):
+        filename = filename.rsplit('.', 1)[0]
+    
+    # Get card colors and payment dates
+    card_colors = assign_card_colors(cards)
+    
+    # Calculate start date (current month)
+    start_date = datetime.now().replace(day=1)
+    
+    # Create figure with subplots for each month
+    fig_width = 16
+    fig_height = 12
+    
+    # Calculate grid layout based on months
+    if months <= 3:
+        rows, cols = 1, months
+    elif months <= 6:
+        rows, cols = 2, 3
+    elif months <= 9:
+        rows, cols = 3, 3
+    else:
+        rows, cols = 3, 4
+    
+    fig, axes = plt.subplots(rows, cols, figsize=(fig_width, fig_height))
+    fig.suptitle(f'Credit Card Payment Schedule - {months} Month View', fontsize=16, fontweight='bold')
+    
+    # Flatten axes for easier iteration
+    if months == 1:
+        axes = [axes]
+    elif rows == 1:
+        axes = axes if hasattr(axes, '__iter__') else [axes]
+    else:
+        axes = axes.flatten()
+    
+    # Generate calendar for each month
+    for i in range(months):
+        current_date = start_date + timedelta(days=32*i)
+        current_date = current_date.replace(day=1)
+        
+        ax = axes[i]
+        ax.clear()
+        
+        # Create calendar grid
+        year = current_date.year
+        month = current_date.month
+        cal = calendar.monthcalendar(year, month)
+        
+        # Set up the calendar
+        ax.set_xlim(0, 7)
+        ax.set_ylim(0, len(cal))
+        ax.set_aspect('equal')
+        
+        # Title
+        month_name = calendar.month_name[month]
+        ax.set_title(f'{month_name} {year}', fontsize=12, fontweight='bold')
+        
+        # Day headers
+        days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+        for j, day in enumerate(days):
+            ax.text(j+0.5, len(cal)-0.1, day, ha='center', va='center', fontweight='bold')
+        
+        # Fill in calendar dates
+        for week_num, week in enumerate(cal):
+            for day_num, day in enumerate(week):
+                if day == 0:
+                    continue
+                
+                # Check if any cards are due on this day
+                cards_due = []
+                for card in cards:
+                    if card.balance > 0:
+                        due_day = parse_due_date(card.due_date)
+                        if due_day == day:
+                            cards_due.append(card)
+                
+                y_pos = len(cal) - week_num - 1
+                
+                if cards_due:
+                    # Color the cell based on the first card due
+                    primary_card = cards_due[0]
+                    color = get_matplotlib_color(card_colors[primary_card.name])
+                    
+                    # Create colored rectangle
+                    rect = patches.Rectangle((day_num, y_pos-0.4), 1, 0.8, 
+                                           linewidth=1, edgecolor='black', 
+                                           facecolor=color, alpha=0.7)
+                    ax.add_patch(rect)
+                    
+                    # Add day number
+                    ax.text(day_num+0.5, y_pos, str(day), ha='center', va='center', 
+                           fontweight='bold', color='white', fontsize=10)
+                    
+                    # Add indicator for multiple cards
+                    if len(cards_due) > 1:
+                        ax.text(day_num+0.8, y_pos+0.3, '*', ha='center', va='center', 
+                               fontweight='bold', color='white', fontsize=8)
+                else:
+                    # Regular day
+                    ax.text(day_num+0.5, y_pos, str(day), ha='center', va='center', fontsize=10)
+        
+        # Remove axes ticks and labels
+        ax.set_xticks([])
+        ax.set_yticks([])
+        
+        # Add grid
+        for j in range(8):
+            ax.axvline(j, color='black', linewidth=0.5)
+        for j in range(len(cal)+1):
+            ax.axhline(j, color='black', linewidth=0.5)
+    
+    # Hide unused subplots
+    for i in range(months, len(axes)):
+        axes[i].set_visible(False)
+    
+    # Add legend
+    legend_elements = []
+    for card_name, color in card_colors.items():
+        mpl_color = get_matplotlib_color(color)
+        legend_elements.append(patches.Patch(color=mpl_color, label=card_name))
+    
+    if legend_elements:
+        fig.legend(handles=legend_elements, loc='lower center', 
+                  bbox_to_anchor=(0.5, 0.02), ncol=min(len(legend_elements), 4))
+    
+    # Add payment summary
+    total_cards = len([card for card in cards if card.balance > 0])
+    total_balance = sum(card.balance for card in cards if card.balance > 0)
+    total_minimums = sum(card.minimum_payment for card in cards if card.balance > 0)
+    
+    fig.text(0.02, 0.98, f'Total Cards: {total_cards}', transform=fig.transFigure, 
+             fontsize=10, verticalalignment='top')
+    fig.text(0.02, 0.95, f'Total Balance: ${total_balance:,.2f}', transform=fig.transFigure, 
+             fontsize=10, verticalalignment='top')
+    fig.text(0.02, 0.92, f'Total Min Payments: ${total_minimums:.2f}', transform=fig.transFigure, 
+             fontsize=10, verticalalignment='top')
+    
+    # Save the figure
+    output_file = f"{filename}.{output_format}"
+    plt.tight_layout()
+    if output_format.lower() == 'pdf':
+        plt.savefig(output_file, format='pdf', bbox_inches='tight', dpi=300)
+    else:
+        plt.savefig(output_file, format='png', bbox_inches='tight', dpi=300)
+    
+    plt.close()
+    
+    return output_file
+
+
 def read_cards_from_json(file_path: str, default_apr: float = 18.0) -> List[CreditCard]:
     """Read credit card data from JSON file."""
     cards = []
@@ -705,7 +899,23 @@ def read_cards_from_csv(file_path: str, default_apr: float = 18.0) -> List[Credi
     default=None,
     help="Show calendar view for specific month (YYYY-MM format)",
 )
-def main(file, budget, save_to_file, calendar, calendar_month):
+@click.option(
+    "--export",
+    type=click.Choice(['3', '6', '9', '12']),
+    help="Export payment schedule calendar (3, 6, 9, or 12 months)",
+)
+@click.option(
+    "--export-format",
+    type=click.Choice(['pdf', 'png']),
+    default='pdf',
+    help="Export format (pdf or png, default: pdf)",
+)
+@click.option(
+    "--export-filename",
+    type=str,
+    help="Custom filename for export (without extension)",
+)
+def main(file, budget, save_to_file, calendar, calendar_month, export, export_format, export_filename):
     """Credit Card Debt Paydown Planner using the Debt Snowball Method."""
 
     click.echo("🏦 Credit Card Debt Paydown Planner")
@@ -836,6 +1046,40 @@ def main(file, budget, save_to_file, calendar, calendar_month):
             click.echo(f"❌ Calendar error: {e}")
             sys.exit(1)
         # Exit after showing calendar (calendar-only mode)
+        return
+
+    # Handle export functionality
+    if export:
+        try:
+            months = int(export)
+            
+            if not MATPLOTLIB_AVAILABLE:
+                click.echo("❌ Export functionality requires matplotlib. Install with: pip install matplotlib")
+                sys.exit(1)
+            
+            click.echo(f"📄 Exporting {months}-month payment schedule calendar...")
+            
+            # Generate export filename if not provided
+            if export_filename:
+                filename = export_filename
+            else:
+                filename = f"payment_schedule_{months}months"
+            
+            # Export the calendar
+            output_file = export_payment_schedule(cards, months, export_format, filename)
+            
+            click.echo(f"✅ Payment schedule exported to: {output_file}")
+            click.echo(f"📅 Calendar shows payment due dates for {months} months")
+            click.echo(f"🎨 Color-coded by credit card with legend included")
+            
+        except ValueError as e:
+            click.echo(f"❌ Export error: {e}")
+            sys.exit(1)
+        except Exception as e:
+            click.echo(f"❌ Unexpected export error: {e}")
+            sys.exit(1)
+        
+        # Exit after export (export-only mode)
         return
 
     # Filter out cards with 0 balance for payment calculations

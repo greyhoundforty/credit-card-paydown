@@ -37,6 +37,13 @@ python cc_paydown_planner.py --file card-balances.json --calendar-month 2024-08
 # Short form calendar
 python cc_paydown_planner.py -f card-balances.json -c
 
+# Export payment schedule calendar (PDF format)
+python cc_paydown_planner.py --file card-balances.json --export 12
+python cc_paydown_planner.py --file card-balances.json --export 6 --export-format png
+
+# Export with custom filename
+python cc_paydown_planner.py --file card-balances.json --export 3 --export-filename my_schedule
+
 # Alternative entry point
 python app.py
 ```
@@ -46,6 +53,7 @@ python app.py
   - `click` (install with `pip install click`)
 - **Optional dependencies**:
   - `rich` (install with `pip install rich`) - for enhanced calendar view with colors
+  - `matplotlib` (install with `pip install matplotlib`) - for PDF/PNG export functionality
 - Uses Python standard library modules: `datetime`, `typing`, `sys`, `csv`, `os`, `json`, `calendar`, `re`
 - Development dependencies: `pre-commit`, `detect-secrets` (optional, for development)
 

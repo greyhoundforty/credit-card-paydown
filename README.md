@@ -7,6 +7,7 @@ A Python-based tool that helps create payment schedules for credit card debt usi
 - **Debt Snowball Method**: Pays off smallest balances first for psychological wins
 - **Multiple Input Formats**: Interactive mode, JSON files, or CSV files
 - **Calendar View**: Visual calendar showing payment due dates with color-coded cards
+- **Export Functionality**: Generate PDF/PNG payment schedule calendars for printing
 - **Zero Balance Support**: Handles cards with $0 balances gracefully
 - **Data Export**: Save your card data to JSON files for future use
 - **Budget Planning**: Specify monthly budget via command line or interactive prompts
@@ -55,6 +56,9 @@ python cc_paydown_planner.py --file my-cards.json --budget 500
 | `--save-to-file` | `-s` | Save entered card data to JSON file |
 | `--calendar` | `-c` | Show calendar view with payment due dates for current month |
 | `--calendar-month` | | Show calendar view for specific month (YYYY-MM format) |
+| `--export` | | Export payment schedule calendar (3, 6, 9, or 12 months) |
+| `--export-format` | | Export format (pdf or png, default: pdf) |
+| `--export-filename` | | Custom filename for export (without extension) |
 | `--help` | | Show help message |
 
 ### Usage Examples
@@ -78,6 +82,13 @@ python cc_paydown_planner.py --file my-cards.json --calendar
 
 # Calendar view (specific month)
 python cc_paydown_planner.py --file my-cards.json --calendar-month 2024-08
+
+# Export payment schedule (PDF format)
+python cc_paydown_planner.py --file my-cards.json --export 12
+python cc_paydown_planner.py --file my-cards.json --export 6 --export-format png
+
+# Export with custom filename
+python cc_paydown_planner.py --file my-cards.json --export 3 --export-filename my_schedule
 ```
 
 ### File Formats
@@ -113,8 +124,9 @@ Chase Freedom,3500.00,5000.00,75.00,15th
 - Python 3.7 or higher
 - click (required dependency)
 - rich (optional, for enhanced calendar view with colors)
+- matplotlib (optional, for PDF/PNG export functionality)
 
-For detailed installation instructions, development setup, testing, and advanced usage, see [INSTALL.md](INSTALL.md).
+For detailed installation instructions, development setup, testing, and advanced usage, see [INSTALL.md](documentation/INSTALL.md).
 
 ## Support
 
