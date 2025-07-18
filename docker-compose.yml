@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  credit-card-planner:
+    build: .
+    stdin_open: true
+    tty: true
+    volumes:
+      - .:/app
+    environment:
+      - TERM=xterm-256color
+      - PYTHONUNBUFFERED=1
+    command: python cc_paydown_planner.py
+
+  # Service for testing with file input
+  test-json:
+    build: .
+    stdin_open: true
+    tty: true
+    volumes:
+      - .:/app
+    environment:
+      - TERM=xterm-256color
+      - PYTHONUNBUFFERED=1
+    command: python cc_paydown_planner.py --file card-balances.json --budget 500
+
+  # Service for testing CSV input
+  test-csv:
+    build: .
+    stdin_open: true
+    tty: true
+    volumes:
+      - .:/app
+    environment:
+      - TERM=xterm-256color
+      - PYTHONUNBUFFERED=1
+    command: python cc_paydown_planner.py --file credit-cards.csv --budget 500
+
+  # Service for interactive testing
+  interactive:
+    build: .
+    stdin_open: true
+    tty: true
+    volumes:
+      - .:/app
+    environment:
+      - TERM=xterm-256color
+      - PYTHONUNBUFFERED=1
+    command: /bin/bash

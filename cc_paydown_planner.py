@@ -22,12 +22,16 @@ class CreditCard:
         minimum_payment: float,
         due_date: str,
         apr: float = 18.0,
+        credit_limit: float = 0.0,
+        notes: str = "",
     ):
         self.name = name
         self.balance = balance
         self.minimum_payment = minimum_payment
         self.due_date = due_date
         self.apr = apr
+        self.credit_limit = credit_limit
+        self.notes = notes
         self.monthly_interest_rate = apr / 100 / 12
 
     def __repr__(self):
@@ -244,7 +248,15 @@ def read_cards_from_json(file_path: str, default_apr: float = 18.0) -> List[Cred
                     # APR can be specified per card or use file/default APR
                     apr = float(card_data.get("apr", file_default_apr))
 
-                    card = CreditCard(name, balance, min_payment, due_date, apr)
+                    # Credit limit is optional
+                    credit_limit = float(card_data.get("credit_limit", 0.0))
+
+                    # Notes is optional
+                    notes = str(card_data.get("notes", "")).strip()
+
+                    card = CreditCard(
+                        name, balance, min_payment, due_date, apr, credit_limit, notes
+                    )
                     cards.append(card)
 
                 except (ValueError, KeyError, TypeError) as e:
@@ -291,6 +303,9 @@ def read_cards_from_csv(file_path: str, default_apr: float = 18.0) -> List[Credi
                 "Credit Limit",
                 "Minimum Payment",
                 "Payment Due Date",
+            ]
+            optional_headers = [
+                "Notes",
             ]
             missing_headers = [
                 h for h in required_headers if h not in normalized_headers
@@ -351,7 +366,21 @@ def read_cards_from_csv(file_path: str, default_apr: float = 18.0) -> List[Credi
                     if not due_date:
                         due_date = "15th"  # Default due date
 
-                    card = CreditCard(name, balance, min_payment, due_date, default_apr)
+                    # Notes is optional
+                    notes = ""
+                    if "Notes" in normalized_headers:
+                        notes_col = normalized_headers["Notes"]
+                        notes = row[notes_col].strip()
+
+                    card = CreditCard(
+                        name,
+                        balance,
+                        min_payment,
+                        due_date,
+                        default_apr,
+                        credit_limit,
+                        notes,
+                    )
                     cards.append(card)
 
                 except (ValueError, KeyError) as e:
@@ -432,12 +461,18 @@ def main(file, budget, save_to_file):
             # Get card name
             name = click.prompt("Card name", type=str)
 
+            # Get credit limit
+            credit_limit = click.prompt("Credit limit", type=float, default=0.0)
+
             # Get current balance
             while True:
                 try:
                     balance = click.prompt("Current balance", type=float)
-                    if balance <= 0:
-                        click.echo("Balance must be greater than 0.")
+                    if balance < 0:
+                        click.echo("Balance must be greater than or equal to 0.")
+                        continue
+                    if credit_limit > 0 and balance > credit_limit:
+                        click.echo("Current balance cannot exceed credit limit.")
                         continue
                     break
                 except click.BadParameter:
@@ -447,10 +482,12 @@ def main(file, budget, save_to_file):
             while True:
                 try:
                     min_payment = click.prompt("Minimum payment", type=float)
-                    if min_payment <= 0:
-                        click.echo("Minimum payment must be greater than 0.")
+                    if min_payment < 0:
+                        click.echo(
+                            "Minimum payment must be greater than or equal to 0."
+                        )
                         continue
-                    if min_payment > balance:
+                    if balance > 0 and min_payment > balance:
                         click.echo("Minimum payment cannot be greater than balance.")
                         continue
                     break
@@ -465,14 +502,28 @@ def main(file, budget, save_to_file):
             # Get APR (optional)
             apr = click.prompt("Annual Percentage Rate (APR)", type=float, default=18.0)
 
+            # Get notes (optional)
+            notes = click.prompt(
+                "Notes (optional)", type=str, default="", show_default=False
+            )
+
             # Create card object
-            card = CreditCard(name, balance, min_payment, due_date, apr)
+            card = CreditCard(
+                name, balance, min_payment, due_date, apr, credit_limit, notes
+            )
             cards.append(card)
 
             # Display card summary
+            available_credit = credit_limit - balance if credit_limit > 0 else 0
             click.echo(
                 f"\n✅ Added: {name} - Balance: ${balance:.2f}, Min Payment: ${min_payment:.2f}, APR: {apr}%"
             )
+            if credit_limit > 0:
+                click.echo(
+                    f"   Credit Limit: ${credit_limit:.2f}, Available Credit: ${available_credit:.2f}"
+                )
+            if notes:
+                click.echo(f"   Notes: {notes}")
 
             # Ask if user wants to add another card
             if not click.confirm("\nAdd another credit card?"):
@@ -504,6 +555,10 @@ def main(file, budget, save_to_file):
         click.echo(f"   Balance: ${card.balance:,.2f}")
         click.echo(f"   Minimum Payment: ${card.minimum_payment:.2f}")
         click.echo(f"   APR: {card.apr}%")
+        if card.credit_limit > 0:
+            available_credit = card.credit_limit - card.balance
+            click.echo(f"   Credit Limit: ${card.credit_limit:,.2f}")
+            click.echo(f"   Available Credit: ${available_credit:,.2f}")
 
     click.echo(f"\nTotal Debt: ${total_balance:,.2f}")
     click.echo(f"Total Minimum Payments: ${total_minimums:.2f}")
@@ -590,9 +645,22 @@ def main(file, budget, save_to_file):
             if remaining_cards:
                 click.echo("   Remaining balances:")
                 for balance_info in remaining_cards:
-                    click.echo(
-                        f"     - {balance_info['card']}: ${balance_info['balance']:,.2f}"
+                    # Find the original card to get credit limit
+                    original_card = next(
+                        (c for c in cards if c.name == balance_info["card"]), None
                     )
+                    if original_card and original_card.credit_limit > 0:
+                        available_credit = (
+                            original_card.credit_limit - balance_info["balance"]
+                        )
+                        click.echo(
+                            f"     - {balance_info['card']}: ${balance_info['balance']:,.2f} "
+                            f"(Available Credit: ${available_credit:,.2f})"
+                        )
+                    else:
+                        click.echo(
+                            f"     - {balance_info['card']}: ${balance_info['balance']:,.2f}"
+                        )
             else:
                 click.echo("   🎉 All cards paid off!")
 
@@ -636,6 +704,8 @@ def save_cards_to_json(cards: List[CreditCard], filename: str) -> None:
                 "minimum_payment": card.minimum_payment,
                 "payment_due_date": card.due_date,
                 "apr": card.apr,
+                "credit_limit": card.credit_limit,
+                "notes": card.notes,
             }
             cards_data.append(card_data)
 
@@ -677,6 +747,7 @@ def show_file_format_help():
                     "minimum_payment": 75.00,
                     "payment_due_date": "15th",
                     "apr": 19.99,
+                    "notes": "Main rewards card",
                 },
                 {
                     "card_name": "Capital One",
@@ -684,6 +755,7 @@ def show_file_format_help():
                     "credit_limit": 2000.00,
                     "minimum_payment": 35.00,
                     "payment_due_date": "28th",
+                    "notes": "",
                 },
             ],
             indent=2,
@@ -702,6 +774,7 @@ def show_file_format_help():
                         "credit_limit": 1500.00,
                         "minimum_payment": 25.00,
                         "payment_due_date": "5th",
+                        "notes": "Cashback card",
                     }
                 ],
             },
@@ -715,11 +788,11 @@ def show_file_format_help():
     click.echo("Create a .csv file with these headers:")
     click.echo()
     click.echo(
-        "Card Name,Current Balance,Credit Limit,Minimum Payment,Payment Due Date"
+        "Card Name,Current Balance,Credit Limit,Minimum Payment,Payment Due Date,Notes"
     )
-    click.echo("Chase Freedom,3500.00,5000.00,75.00,15th")
-    click.echo("Capital One,1200.00,2000.00,35.00,28th")
-    click.echo("Discover,875.50,1500.00,25.00,5th")
+    click.echo("Chase Freedom,3500.00,5000.00,75.00,15th,Main rewards card")
+    click.echo("Capital One,1200.00,2000.00,35.00,28th,")
+    click.echo("Discover,875.50,1500.00,25.00,5th,Cashback card")
     click.echo()
 
     # Usage examples
@@ -734,10 +807,13 @@ def show_file_format_help():
     click.echo("📋 JSON FIELD REFERENCE:")
     click.echo("  • card_name (required): Name of the credit card")
     click.echo("  • current_balance (required): Current balance amount")
-    click.echo("  • credit_limit (optional): Credit limit for the card")
+    click.echo("  • credit_limit (optional): Credit limit for the card, defaults to 0")
     click.echo("  • minimum_payment (required): Minimum monthly payment")
     click.echo("  • payment_due_date (optional): Due date, defaults to '15th'")
     click.echo("  • apr (optional): Annual Percentage Rate, defaults to 18.0%")
+    click.echo(
+        "  • notes (optional): Additional notes about the card, defaults to empty string"
+    )
 
 
 if __name__ == "__main__":

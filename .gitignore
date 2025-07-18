@@ -2,6 +2,9 @@
 ###  GitHub: Python  ###
 ###------------------###
 
+# Don't save the file I use for testing
+card-balances.json
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
