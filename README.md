@@ -6,6 +6,7 @@ A Python-based tool that helps create payment schedules for credit card debt usi
 
 - **Debt Snowball Method**: Pays off smallest balances first for psychological wins
 - **Multiple Input Formats**: Interactive mode, JSON files, or CSV files
+- **Calendar View**: Visual calendar showing payment due dates with color-coded cards
 - **Zero Balance Support**: Handles cards with $0 balances gracefully
 - **Data Export**: Save your card data to JSON files for future use
 - **Budget Planning**: Specify monthly budget via command line or interactive prompts
@@ -52,6 +53,8 @@ python cc_paydown_planner.py --file my-cards.json --budget 500
 | `--file` | `-f` | Load card data from CSV or JSON file |
 | `--budget` | `-b` | Specify monthly budget (skips budget prompt) |
 | `--save-to-file` | `-s` | Save entered card data to JSON file |
+| `--calendar` | `-c` | Show calendar view with payment due dates for current month |
+| `--calendar-month` | | Show calendar view for specific month (YYYY-MM format) |
 | `--help` | | Show help message |
 
 ### Usage Examples
@@ -69,6 +72,12 @@ python cc_paydown_planner.py --file my-cards.json --budget 1000
 
 # Combined options
 python cc_paydown_planner.py -f cards.json -b 1000 -s updated-cards.json
+
+# Calendar view (current month)
+python cc_paydown_planner.py --file my-cards.json --calendar
+
+# Calendar view (specific month)
+python cc_paydown_planner.py --file my-cards.json --calendar-month 2024-08
 ```
 
 ### File Formats
@@ -81,7 +90,9 @@ python cc_paydown_planner.py -f cards.json -b 1000 -s updated-cards.json
     "current_balance": 3500.00,
     "minimum_payment": 75.00,
     "payment_due_date": "15th",
-    "apr": 19.99
+    "apr": 19.99,
+    "credit_limit": 5000.00,
+    "notes": "Main rewards card"
   }
 ]
 ```
@@ -100,7 +111,8 @@ Chase Freedom,3500.00,5000.00,75.00,15th
 ## Dependencies
 
 - Python 3.7 or higher
-- click (only external dependency)
+- click (required dependency)
+- rich (optional, for enhanced calendar view with colors)
 
 For detailed installation instructions, development setup, testing, and advanced usage, see [INSTALL.md](INSTALL.md).
 

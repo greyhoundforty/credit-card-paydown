@@ -1,37 +1,38 @@
 [
   {
-    "card_name": "Chase Freedom",
-    "current_balance": 2850.00,
-    "minimum_payment": 85.00,
+    "card_name": "Best Buy",
+    "current_balance": 3100.0,
+    "minimum_payment": 120.0,
     "payment_due_date": "15th",
-    "apr": 19.99
+    "apr": 23.24,
+    "credit_limit": 4500.0,
+    "notes": ""
   },
   {
-    "card_name": "Capital One Venture",
-    "current_balance": 1250.00,
-    "minimum_payment": 35.00,
-    "payment_due_date": "28th",
-    "apr": 17.24
+    "card_name": "Citi Card",
+    "current_balance": 1117.0,
+    "minimum_payment": 100.0,
+    "payment_due_date": "2nd",
+    "apr": 22.5,
+    "credit_limit": 3000.0,
+    "notes": "Daily driver card"
   },
   {
     "card_name": "Discover It",
-    "current_balance": 580.00,
-    "minimum_payment": 25.00,
-    "payment_due_date": "5th",
-    "apr": 15.99
+    "current_balance": 200.0,
+    "minimum_payment": 32.0,
+    "payment_due_date": "6th",
+    "apr": 28.94,
+    "credit_limit": 2000.0,
+    "notes": "Tackling this one first"
   },
   {
-    "card_name": "Citi Double Cash",
-    "current_balance": 3420.00,
-    "minimum_payment": 105.00,
+    "card_name": "Capital One Venture",
+    "current_balance": 675.0,
+    "minimum_payment": 75.0,
     "payment_due_date": "22nd",
-    "apr": 21.99
-  },
-  {
-    "card_name": "Amazon Prime Card",
-    "current_balance": 0.00,
-    "minimum_payment": 0.00,
-    "payment_due_date": "10th",
-    "apr": 18.74
+    "apr": 21.25,
+    "credit_limit": 1500.0,
+    "notes": ""
   }
 ]

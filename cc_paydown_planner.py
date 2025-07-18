@@ -4,14 +4,26 @@ Credit Card Debt Paydown Planner
 Uses the debt snowball method to create a payment schedule.
 """
 
+import calendar
 import csv
 import json
 import os
+import re
 import sys
 from datetime import datetime, timedelta
 from typing import Dict, List, Tuple
 
 import click
+
+# Try to import rich for enhanced calendar styling
+try:
+    from rich.console import Console
+    from rich.table import Table
+    from rich.text import Text
+    from rich.panel import Panel
+    RICH_AVAILABLE = True
+except ImportError:
+    RICH_AVAILABLE = False
 
 
 class CreditCard:
@@ -166,6 +178,271 @@ def normalize_header(header: str) -> str:
     # Remove leading numbers and whitespace (e.g., "1   Current Balance" -> "Current Balance")
     normalized = re.sub(r"^\d+\s*", "", header.strip())
     return normalized
+
+
+def parse_due_date(due_date: str) -> int:
+    """Extract day number from due date string (e.g., '15th' -> 15)."""
+    # Remove common suffixes and extract numeric part
+    cleaned = re.sub(r'(st|nd|rd|th)\b', '', due_date.lower().strip())
+    match = re.search(r'\d+', cleaned)
+    if match:
+        day = int(match.group())
+        # Validate day range (1-31)
+        if 1 <= day <= 31:
+            return day
+    # Return 15 as default if parsing fails
+    return 15
+
+
+def show_calendar_view(cards: List[CreditCard], month: int = None, year: int = None) -> None:
+    """Display calendar view with payment due dates highlighted."""
+    # Use current month/year if not specified
+    if month is None or year is None:
+        now = datetime.now()
+        month = month or now.month
+        year = year or now.year
+    
+    # Validate month/year ranges
+    if not (1 <= month <= 12):
+        click.echo("❌ Invalid month. Must be between 1 and 12.")
+        return
+    if not (1900 <= year <= 2100):
+        click.echo("❌ Invalid year. Must be between 1900 and 2100.")
+        return
+    
+    # Parse payment due dates from cards
+    payment_dates = {}  # {day: [card_info]}
+    
+    for card in cards:
+        if card.balance > 0:  # Only include cards with balances
+            day = parse_due_date(card.due_date)
+            if day not in payment_dates:
+                payment_dates[day] = []
+            payment_dates[day].append({
+                'name': card.name,
+                'payment': card.minimum_payment,
+                'balance': card.balance
+            })
+    
+    # Display calendar header
+    month_name = calendar.month_name[month]
+    click.echo(f"\n🗓️  PAYMENT CALENDAR - {month_name} {year}")
+    click.echo("═" * 50)
+    
+    if not payment_dates:
+        click.echo("No payment due dates found for cards with balances.")
+        return
+    
+    # Generate calendar using Python's calendar module
+    cal = calendar.monthcalendar(year, month)
+    
+    # Create header
+    click.echo(f"      {month_name} {year}")
+    click.echo("Mo Tu We Th Fr Sa Su")
+    
+    # Display calendar with highlighted payment dates
+    for week in cal:
+        week_str = ""
+        for day in week:
+            if day == 0:
+                week_str += "   "  # Empty cell
+            else:
+                if day in payment_dates:
+                    # Highlight payment due dates
+                    if day < 10:
+                        week_str += f" {day}*"
+                    else:
+                        week_str += f"{day}*"
+                else:
+                    if day < 10:
+                        week_str += f" {day} "
+                    else:
+                        week_str += f"{day} "
+        click.echo(week_str)
+    
+    # Display payment due dates legend
+    click.echo("\nPayment Due Dates:")
+    click.echo("─" * 20)
+    
+    # Sort by day for display
+    for day in sorted(payment_dates.keys()):
+        day_suffix = get_day_suffix(day)
+        click.echo(f"• {day}{day_suffix}:")
+        
+        total_due = 0
+        for card_info in payment_dates[day]:
+            click.echo(f"  - {card_info['name']}: ${card_info['payment']:.2f} (Balance: ${card_info['balance']:,.2f})")
+            total_due += card_info['payment']
+        
+        if len(payment_dates[day]) > 1:
+            click.echo(f"  Total due: ${total_due:.2f}")
+        click.echo()
+
+
+def get_day_suffix(day: int) -> str:
+    """Get the appropriate suffix for a day number (e.g., 1st, 2nd, 3rd, 4th)."""
+    if 10 <= day % 100 <= 20:
+        return "th"
+    else:
+        return {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
+
+
+def parse_calendar_date(date_str: str) -> Tuple[int, int]:
+    """Parse calendar date string in format YYYY-MM."""
+    try:
+        parts = date_str.split('-')
+        if len(parts) != 2:
+            raise ValueError("Invalid format")
+        
+        year = int(parts[0])
+        month = int(parts[1])
+        
+        if not (1 <= month <= 12):
+            raise ValueError("Invalid month")
+        if not (1900 <= year <= 2100):
+            raise ValueError("Invalid year")
+            
+        return year, month
+    except (ValueError, IndexError) as e:
+        raise ValueError(f"Invalid date format. Use YYYY-MM (e.g., 2024-07): {e}")
+
+
+def get_card_colors() -> List[str]:
+    """Get a list of distinct colors for credit cards optimized for dark terminals."""
+    return [
+        # Primary colors that work well with white text on dark backgrounds
+        'red', 'green', 'blue', 'magenta', 'cyan',
+        'bright_red', 'bright_green', 'bright_blue', 'bright_magenta', 'bright_cyan',
+        # Additional colors for better visibility
+        'purple', 'orange', 'grey', 'bright_black',
+        # Darker shades that still provide good contrast
+        'dark_red', 'dark_green', 'dark_blue', 'dark_magenta', 'dark_cyan'
+    ]
+
+
+def assign_card_colors(cards: List[CreditCard]) -> Dict[str, str]:
+    """Assign unique colors to each credit card."""
+    colors = get_card_colors()
+    card_colors = {}
+    
+    # Only assign colors to cards with balances
+    cards_with_balance = [card for card in cards if card.balance > 0]
+    
+    for i, card in enumerate(cards_with_balance):
+        # Cycle through colors if there are more cards than colors
+        color_index = i % len(colors)
+        card_colors[card.name] = colors[color_index]
+    
+    return card_colors
+
+
+def show_rich_calendar_view(cards: List[CreditCard], month: int = None, year: int = None) -> None:
+    """Display enhanced calendar view with colored dates using rich library."""
+    if not RICH_AVAILABLE:
+        # Fallback to ASCII calendar if rich is not available
+        show_calendar_view(cards, month, year)
+        return
+    
+    console = Console()
+    
+    # Use current month/year if not specified
+    if month is None or year is None:
+        now = datetime.now()
+        month = month or now.month
+        year = year or now.year
+    
+    # Validate month/year ranges
+    if not (1 <= month <= 12):
+        console.print("[red]❌ Invalid month. Must be between 1 and 12.[/red]")
+        return
+    if not (1900 <= year <= 2100):
+        console.print("[red]❌ Invalid year. Must be between 1900 and 2100.[/red]")
+        return
+    
+    # Parse payment due dates from cards and assign colors
+    payment_dates = {}  # {day: [card_info]}
+    card_colors = assign_card_colors(cards)
+    
+    for card in cards:
+        if card.balance > 0:  # Only include cards with balances
+            day = parse_due_date(card.due_date)
+            if day not in payment_dates:
+                payment_dates[day] = []
+            payment_dates[day].append({
+                'name': card.name,
+                'payment': card.minimum_payment,
+                'balance': card.balance,
+                'color': card_colors[card.name]
+            })
+    
+    # Display calendar header
+    month_name = calendar.month_name[month]
+    console.print(f"\n🗓️  [bold magenta]PAYMENT CALENDAR - {month_name} {year}[/bold magenta]")
+    console.print("═" * 50)
+    
+    if not payment_dates:
+        console.print("[yellow]No payment due dates found for cards with balances.[/yellow]")
+        return
+    
+    # Create rich calendar table
+    table = Table(title=f"{month_name} {year}", show_header=True, header_style="bold cyan")
+    
+    # Add day headers
+    for day in ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']:
+        table.add_column(day, width=4, justify='center')
+    
+    # Generate calendar using Python's calendar module
+    cal = calendar.monthcalendar(year, month)
+    
+    # Add calendar weeks with colored dates
+    for week in cal:
+        row = []
+        for day in week:
+            if day == 0:
+                row.append('')  # Empty cell for days outside the month
+            elif day in payment_dates:
+                # Color the date based on card(s) due
+                cards_due = payment_dates[day]
+                if len(cards_due) == 1:
+                    # Single card due - use its color
+                    color = cards_due[0]['color']
+                    row.append(f'[white on {color}] {day:2d} [/white on {color}]')
+                else:
+                    # Multiple cards due - use first card's color with indicator
+                    color = cards_due[0]['color']
+                    row.append(f'[white on {color}] {day:2d}*[/white on {color}]')
+            else:
+                # Regular date
+                row.append(f' {day:2d} ')
+        table.add_row(*row)
+    
+    console.print(table)
+    
+    # Display color legend
+    console.print("\n[bold cyan]Color Legend:[/bold cyan]")
+    console.print("─" * 20)
+    
+    for card_name, color in card_colors.items():
+        console.print(f"[white on {color}] {card_name} [/white on {color}]")
+    
+    # Display payment due dates details
+    console.print("\n[bold cyan]Payment Due Dates:[/bold cyan]")
+    console.print("─" * 20)
+    
+    # Sort by day for display
+    for day in sorted(payment_dates.keys()):
+        day_suffix = get_day_suffix(day)
+        console.print(f"[bold]• {day}{day_suffix}:[/bold]")
+        
+        total_due = 0
+        for card_info in payment_dates[day]:
+            color = card_info['color']
+            console.print(f"  - [{color}]{card_info['name']}[/{color}]: ${card_info['payment']:.2f} (Balance: ${card_info['balance']:,.2f})")
+            total_due += card_info['payment']
+        
+        if len(payment_dates[day]) > 1:
+            console.print(f"  [bold]Total due: ${total_due:.2f}[/bold]")
+        console.print()
 
 
 def read_cards_from_json(file_path: str, default_apr: float = 18.0) -> List[CreditCard]:
@@ -416,7 +693,19 @@ def read_cards_from_csv(file_path: str, default_apr: float = 18.0) -> List[Credi
     type=str,
     help="Save entered card data to JSON file (e.g., card-balances.json)",
 )
-def main(file, budget, save_to_file):
+@click.option(
+    "--calendar",
+    "-c",
+    is_flag=True,
+    help="Show calendar view with payment due dates for current month",
+)
+@click.option(
+    "--calendar-month",
+    type=str,
+    default=None,
+    help="Show calendar view for specific month (YYYY-MM format)",
+)
+def main(file, budget, save_to_file, calendar, calendar_month):
     """Credit Card Debt Paydown Planner using the Debt Snowball Method."""
 
     click.echo("🏦 Credit Card Debt Paydown Planner")
@@ -532,6 +821,22 @@ def main(file, budget, save_to_file):
     if not cards:
         click.echo("No credit cards entered. Exiting.")
         sys.exit(1)
+
+    # Handle calendar view
+    if calendar or calendar_month:
+        try:
+            if calendar_month:
+                # Parse specific month/year
+                year, month = parse_calendar_date(calendar_month)
+                show_rich_calendar_view(cards, month, year)
+            else:
+                # Show current month calendar
+                show_rich_calendar_view(cards)
+        except ValueError as e:
+            click.echo(f"❌ Calendar error: {e}")
+            sys.exit(1)
+        # Exit after showing calendar (calendar-only mode)
+        return
 
     # Filter out cards with 0 balance for payment calculations
     cards_with_balance = [card for card in cards if card.balance > 0]
